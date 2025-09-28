@@ -1,61 +1,192 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# CloneGPT (Laravel 12 + Vue 3)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Mini-clone de ChatGPT : authentification sécurisée (e-mail + 2FA), sélection dynamique de modèles via OpenRouter, multi-conversations persistées, streaming SSE, et instructions personnalisées par utilisateur.
+Stack : PHP 8.2, Laravel 12 + Jetstream/Fortify/Sanctum, Vue 3 (Composition API) + Inertia + Tailwind, SQLite, Pest.
 
-## About Laravel
+Captures & schémas dans le pdf.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Fonctionnalités
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Auth complète : Register/Login, vérification e-mail, 2FA TOTP (+ codes de secours).
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Chat : envoi classique + streaming (SSE), historique et titres auto.
 
-## Learning Laravel
+Multi-conversations (CRUD côté user) avec cascade des messages.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Modèles IA dynamiques (OpenRouter) avec fallback si l'API est indisponible.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+Instructions personnalisées (tone, style, context, custom_system).
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Front Vue 3 – Composition API uniquement (critère éliminatoire respecté).
 
-## Laravel Sponsors
+Tests Pest (auth, 2FA, e-mail, chat, stream, settings).
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+UI Tailwind, Inertia, Vite.
 
-### Premium Partners
+## Prérequis
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+PHP 8.2+, Composer
 
-## Contributing
+Node 18+ (ou 20+), pnpm/npm/yarn
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+SQLite (inclus avec PHP)
 
-## Code of Conduct
+Un compte Gmail avec 2FA activée pour les mails (ou utiliser MAIL_MAILER=log en dev)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Installation rapide
 
-## Security Vulnerabilities
+```bash
+# 1) cloner
+git clone https://github.com/monLienGitHub/gpt-clone.git
+cd gpt-clone
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# 2) dépendances
+composer install
+npm install
 
-## License
+# 3) fichier d'env
+cp .env.example .env
+php artisan key:generate
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# 4) base SQLite
+mkdir -p database
+type NUL > database/database.sqlite   # Windows (PowerShell)
+# touch database/database.sqlite      # macOS/Linux
+
+# 5) migrations & liens
+php artisan migrate
+php artisan storage:link  # (optionnel)
+
+# 6) démarrer
+npm run dev
+php artisan serve
+```
+
+Par défaut, la page d'accueil redirige vers /login. Une fois connecté et email vérifié, on arrive sur /chat.
+
+## Configuration mail (Gmail + App Password)
+
+Pour que la vérification d'e-mail et la 2FA envoient de vrais mails :
+
+Active la vérification en deux étapes sur ton compte Google.
+
+
+```
+
+En dev "offline", tu peux aussi mettre MAIL_MAILER=log pour écrire les mails dans storage/logs/laravel.log.
+
+## OpenRouter (modèles IA)
+
+Créer une clé sur OpenRouter, puis :
+
+```env
+OPENROUTER_API_KEY=sk-or-...
+OPENROUTER_BASE=https://openrouter.ai/api/v1
+```
+
+Le sélecteur de modèles se remplit via OpenRouterClient::models(). En cas de panne API, on a un fallback local.
+
+## Routes principales
+
+GET / → redirige vers login (si invité) ou chat (si authentifié)
+
+GET /chat → page principale
+
+POST /chat/send → envoi non-stream
+
+POST /chat/stream → SSE (flux token-par-token)
+
+GET /chat/{id} → charger une conversation
+
+PATCH /chat/{id}/rename → renommer
+
+DELETE /chat/{id} → supprimer (messages cascade)
+
+GET /settings, POST /settings → préférences IA
+
+Toutes ces routes sont sous middleware auth + verified.
+
+## Tests
+
+Lancer la suite :
+
+```bash
+php artisan test
+# ou
+./vendor/bin/pest
+```
+
+Environnement de test (.env.testing) :
+
+base SQLite dédiée
+
+mailer array (pas d'envoi réel)
+
+cache array
+
+Couverture : auth/register/email-verify/2FA/profil/chat/stream/settings.
+
+Les tests Jetstream/Fortify générés par le scaffolding sont conservés. Nos tests custom (Pest) s'ajoutent par-dessus.
+
+## Base de données
+
+SQLite (fichier database/database.sqlite) pour dev et test.
+
+Tables domaine :
+
+users (Jetstream/Fortify, 2FA & email_verified_at)
+
+conversations (FK user_id, on delete cascade)
+
+messages (FK conversation_id, on delete cascade, role ∈ {system,user,assistant})
+
+user_settings (FK user_id unique)
+
+Tables techniques (framework) : sessions, personal_access_tokens, password_reset_tokens, jobs, job_batches, failed_jobs, cache, etc.
+
+Schémas UML (à placer dans /docs) :
+
+docs/UML_BDD.png – entités/relations + cardinalités 1..1 / 0..*
+
+docs/UML_Classes.png – contrôleurs, service, modèles
+
+## Sécurité
+
+Vérification d'e-mail obligatoire (MustVerifyEmail).
+
+2FA TOTP (Fortify) + codes de récupération.
+
+CSRF inclus (y compris pour le SSE via X-CSRF-TOKEN + credentials: 'same-origin').
+
+Eloquent → PDO requêtes préparées par défaut (protection injection SQL).
+
+Scoping strict par user_id sur les conversations/messages.
+
+## Dépannage rapide
+
+SMTP 535 (auth échouée) → vérifier que tu utilises un App Password Gmail, et MAIL_ENCRYPTION=tls + port 587.
+
+SSE 419 (CSRF) → vérifier la balise <meta name="csrf-token" ...> et que le front envoie bien X-CSRF-TOKEN + credentials: 'same-origin'.
+
+Sessions qui sautent → utiliser SESSION_DRIVER=database + php artisan session:table.
+
+Modèles OpenRouter vides → vérifier OPENROUTER_API_KEY; sinon fallback local.
+
+## Structure (extrait)
+
+```
+app/
+  Http/Controllers/ChatController.php
+  Http/Controllers/UserSettingsController.php
+  Models/{Conversation,Message,UserSetting}.php
+  Services/OpenRouterClient.php
+config/{jetstream,fortify,services}.php
+database/migrations/*_create_{conversations,messages,user_settings}_table.php
+resources/js/Pages/{Chat.vue,Settings.vue}
+resources/js/Layouts/AppLayout.vue
+tests/Feature/*  (Pest)
+```
+
+## Auteur
+
+Ghazal Loutfi Adonis

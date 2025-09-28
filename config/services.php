@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+
+    'openrouter' => [
+        'base'    => env('OPENROUTER_BASE', 'https://openrouter.ai/api/v1'),
+        'key'     => env('OPENROUTER_API_KEY'),
+        // Ces deux champs aident OpenRouter à whitelister  l'app
+        'referer' => env('APP_URL', 'http://localhost'),
+        'title'   => env('APP_NAME', 'Laravel'),
+    ],
+
 ];
